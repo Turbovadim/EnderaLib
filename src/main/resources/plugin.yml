@@ -1,0 +1,9 @@
+name: enderalib
+version: '1.0'
+main: org.endera.enderalib.EnderaLib
+api-version: '1.20'
+authors: [EnderaDev]
+commands:
+  enderalib:
+    description: Получить информацию о версии плагина
+    usage: /<command> version
