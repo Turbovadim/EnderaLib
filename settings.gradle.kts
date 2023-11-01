@@ -1,3 +1,3 @@
 
-rootProject.name = "enderalib"
+rootProject.name = "EnderaLib"
 

@@ -15,7 +15,7 @@ repositories {
 }
 
 dependencies {
-    compileOnly("io.papermc.paper:paper-api:1.20.1-R0.1-SNAPSHOT")
+    compileOnly("io.papermc.paper:paper-api:1.17.1-R0.1-SNAPSHOT")
     implementation("org.jetbrains.exposed:exposed-core:0.44.0")
     implementation("org.jetbrains.exposed:exposed-dao:0.44.0")
     implementation("org.jetbrains.exposed:exposed-jdbc:0.44.0")
@@ -23,10 +23,23 @@ dependencies {
     implementation("mysql:mysql-connector-java:8.0.28")
 }
 
+tasks.processResources {
+    dependsOn(generatePluginYml)
+}
+
+
+val generatePluginYml = tasks.create("generatePluginYml", Copy::class.java) {
+    from("/src/main/templates/plugin.yml")
+    into("/src/main/resources")
+    expand(mapOf("projectVersion" to project.version))
+}
+
 tasks.shadowJar {
     archiveClassifier.set("shaded")
 }
+
 tasks.jar {
+    dependsOn(generatePluginYml)
     dependsOn("shadowJar")
 }
 
