@@ -21,6 +21,7 @@ dependencies {
     implementation("org.jetbrains.exposed:exposed-jdbc:0.44.0")
     implementation("net.kyori:adventure-text-minimessage:4.14.0")
     implementation("mysql:mysql-connector-java:8.0.28")
+    implementation("org.yaml:snakeyaml:2.2")
 }
 
 tasks.processResources {
