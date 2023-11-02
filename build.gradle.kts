@@ -2,6 +2,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     kotlin("jvm") version "1.9.10"
+    kotlin("plugin.serialization") version "1.9.10"
     id("com.github.johnrengelman.shadow") version "8.1.1"
     application
 }
@@ -21,7 +22,9 @@ dependencies {
     implementation("org.jetbrains.exposed:exposed-jdbc:0.44.0")
     implementation("net.kyori:adventure-text-minimessage:4.14.0")
     implementation("mysql:mysql-connector-java:8.0.28")
-    implementation("org.yaml:snakeyaml:2.2")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.6.0")
+    implementation("com.charleskorn.kaml:kaml:0.55.0")
+
 }
 
 tasks.processResources {
