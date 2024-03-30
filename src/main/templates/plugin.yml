@@ -1,9 +1,9 @@
 name: EnderaLib
 version: ${projectVersion}
 main: org.endera.enderalib.EnderaLib
-api-version: '1.17'
+api-version: '1.18'
 authors: [EnderaDev]
 commands:
   enderalib:
-    description: Получить информацию о версии плагина
+    description: Get info about plugin version
     usage: /<command> version

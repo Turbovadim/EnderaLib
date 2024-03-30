@@ -1,10 +1,9 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    kotlin("jvm") version "1.9.10"
-    kotlin("plugin.serialization") version "1.9.10"
+    kotlin("jvm") version "1.9.23"
+    kotlin("plugin.serialization") version "1.9.23"
     id("com.github.johnrengelman.shadow") version "8.1.1"
-    application
 }
 
 group = "org.endera"
@@ -16,14 +15,22 @@ repositories {
 }
 
 dependencies {
-    compileOnly("io.papermc.paper:paper-api:1.17.1-R0.1-SNAPSHOT")
-    implementation("org.jetbrains.exposed:exposed-core:0.44.0")
-    implementation("org.jetbrains.exposed:exposed-dao:0.44.0")
-    implementation("org.jetbrains.exposed:exposed-jdbc:0.44.0")
-    implementation("net.kyori:adventure-text-minimessage:4.14.0")
-    implementation("mysql:mysql-connector-java:8.0.28")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.6.0")
+    // Minecraft APIs
+    implementation("net.kyori:adventure-text-minimessage:4.16.0")
+    compileOnly("io.papermc.paper:paper-api:1.20.4-R0.1-SNAPSHOT")
+
+    // Exposed
+    implementation("org.jetbrains.exposed:exposed-core:0.48.0")
+    implementation("org.jetbrains.exposed:exposed-dao:0.48.0")
+    implementation("org.jetbrains.exposed:exposed-jdbc:0.48.0")
+
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.6.3")
     implementation("com.charleskorn.kaml:kaml:0.55.0")
+
+    // Database drivers
+    implementation("com.mysql:mysql-connector-j:8.3.0")
+    implementation("com.impossibl.pgjdbc-ng:pgjdbc-ng:0.8.9")
+    implementation("org.mariadb.jdbc:mariadb-java-client:3.3.1")
 
 }
 
@@ -57,8 +64,4 @@ tasks.withType<KotlinCompile> {
 
 tasks.withType<JavaCompile> {
     targetCompatibility = "17"
-}
-
-application {
-    mainClass.set("MainKt")
 }
