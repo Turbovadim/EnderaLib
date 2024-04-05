@@ -2,9 +2,9 @@ package org.endera.enderalib.utils.configuration
 
 import com.charleskorn.kaml.Yaml
 import com.charleskorn.kaml.YamlConfiguration
+import com.charleskorn.kaml.YamlNamingStrategy
 import kotlinx.serialization.KSerializer
 import java.io.File
-
 
 
 /**
@@ -19,7 +19,11 @@ import java.io.File
 fun <T> loadConfig(
     file: File,
     serializer: KSerializer<T>,
-    yamlConfiguration: YamlConfiguration = YamlConfiguration(strictMode = false)
+    yamlConfiguration: YamlConfiguration = YamlConfiguration(
+        strictMode = false,
+        breakScalarsAt = 400,
+        yamlNamingStrategy = YamlNamingStrategy.KebabCase
+    )
 ): T {
     val yaml = Yaml(configuration = yamlConfiguration)
     val charset = Charsets.UTF_8
