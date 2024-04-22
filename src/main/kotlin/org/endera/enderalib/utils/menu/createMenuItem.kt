@@ -15,6 +15,7 @@ fun createMenuItem(
     name: String,
     lore: List<String>? = null,
     modelData: Int? = null,
+    keys: List<ItemNameKey> = listOf(),
 ): ItemStack {
     val item = ItemStack(material)
     val meta = item.itemMeta as ItemMeta
@@ -24,6 +25,11 @@ fun createMenuItem(
     if (modelData != null) {
         meta.setCustomModelData(modelData)
     }
+
+    keys.forEach {
+        meta.persistentDataContainer.set(it.namespacedKey, PersistentDataType.STRING, it.value)
+    }
+
     meta.displayName(("<!italic>$name").stringToComponent())
     meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES)
     item.itemMeta = meta
@@ -35,41 +41,24 @@ data class ItemNameKey(
     val value: String,
 )
 
-fun createMenuItem(
-    material: Material,
-    name: String,
-    lore: List<String>? = null,
-    modelData: Int? = null,
-    keys: List<ItemNameKey>
-): ItemStack {
-
-    val item = createMenuItem(material, name, lore, modelData)
-    val meta = item.itemMeta as ItemMeta
-
-    keys.forEach {
-        meta.persistentDataContainer.set(it.namespacedKey, PersistentDataType.STRING, it.value)
-    }
-
-    item.itemMeta = meta
-    return item
-}
-
 fun createMenuHeadItem(
     name: String,
     owner: String,
     lore: List<String>? = null,
     modelData: Int? = null,
-    keys: List<ItemNameKey>
+    keys: List<ItemNameKey> = listOf()
 ): ItemStack {
 
-    val item = createMenuItem(Material.PLAYER_HEAD, name, lore, modelData)
+    val item = createMenuItem(
+        material = Material.PLAYER_HEAD,
+        name = name,
+        lore = lore,
+        modelData = modelData,
+        keys = keys
+    )
     val meta = item.itemMeta as SkullMeta
 
     meta.owningPlayer = Bukkit.getOfflinePlayer(owner)
-
-    keys.forEach {
-        meta.persistentDataContainer.set(it.namespacedKey, PersistentDataType.STRING, it.value)
-    }
 
     item.itemMeta = meta
     return item

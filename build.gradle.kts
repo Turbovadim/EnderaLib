@@ -1,22 +1,11 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.jetbrains.kotlin.ir.backend.js.compile
 
 plugins {
     kotlin("jvm") version "1.9.23"
     kotlin("plugin.serialization") version "1.9.23"
     id("com.github.johnrengelman.shadow") version "8.1.1"
     `maven-publish`
-}
-
-publishing {
-    publications {
-        create<MavenPublication>("maven") {
-            groupId = "org.endera.enderalib"
-            artifactId = "enderalib"
-            version = "1.0-SNAPSHOT"
-
-            from(components["java"])
-        }
-    }
 }
 
 group = "org.endera"
@@ -27,9 +16,11 @@ repositories {
     maven("https://repo.papermc.io/repository/maven-public/")
 }
 
-dependencies {
+val deps = dependencies {
     // Minecraft APIs
+
     compileOnly("net.kyori:adventure-text-minimessage:4.16.0")
+
     compileOnly("io.papermc.paper:paper-api:1.20.4-R0.1-SNAPSHOT")
 
     // Exposed
@@ -46,6 +37,19 @@ dependencies {
     runtimeOnly("org.mariadb.jdbc:mariadb-java-client:3.3.1")
 
 }
+
+publishing {
+    publications {
+        create<MavenPublication>("maven") {
+            groupId = "org.endera.enderalib"
+            artifactId = "enderalib"
+            version = "1.0-SNAPSHOT"
+
+            from(components["java"])
+        }
+    }
+}
+
 
 tasks.processResources {
     dependsOn(generatePluginYml)

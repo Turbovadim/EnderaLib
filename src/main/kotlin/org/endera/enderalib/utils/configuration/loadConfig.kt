@@ -20,7 +20,7 @@ fun <T> loadConfig(
     file: File,
     serializer: KSerializer<T>,
     yamlConfiguration: YamlConfiguration = YamlConfiguration(
-        strictMode = false,
+        strictMode = true,
         breakScalarsAt = 400,
         yamlNamingStrategy = YamlNamingStrategy.KebabCase
     )
