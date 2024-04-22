@@ -10,8 +10,8 @@ import org.endera.enderalib.utils.configuration.PluginException
 import org.endera.enderalib.utils.configuration.configLoadCreationHandler
 import java.io.File
 
-lateinit var configFile: File
-lateinit var config: ConfigScheme
+internal lateinit var configFile: File
+internal lateinit var config: ConfigScheme
 
 internal class EnderaLib : JavaPlugin() {
 

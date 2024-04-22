@@ -23,7 +23,7 @@ fun <T> writeConfig(
     yamlConfiguration: YamlConfiguration = YamlConfiguration(
         strictMode = false,
         breakScalarsAt = 400,
-        yamlNamingStrategy = YamlNamingStrategy.KebabCase
+        yamlNamingStrategy = YamlNamingStrategy.KebabCase,
     )
 ) {
     val yaml = Yaml(configuration = yamlConfiguration)
