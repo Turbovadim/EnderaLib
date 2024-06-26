@@ -8,7 +8,7 @@ plugins {
 }
 
 group = "org.endera"
-version = "1.0"
+version = "1.0.1"
 
 repositories {
     mavenCentral()
@@ -17,7 +17,7 @@ repositories {
 
 val deps = dependencies {
     // Minecraft APIs
-    val exposedVersion = "0.50.1"
+    val exposedVersion = "0.52.0"
 
     compileOnly("net.kyori:adventure-text-minimessage:4.16.0")
 
@@ -30,13 +30,13 @@ val deps = dependencies {
 
     api("com.zaxxer:HikariCP:5.1.0")
 
-    api("org.jetbrains.kotlinx:kotlinx-serialization-core:1.6.3")
-    api("com.charleskorn.kaml:kaml:0.59.0")
+    api("org.jetbrains.kotlinx:kotlinx-serialization-core:1.7.1")
+    api("com.charleskorn.kaml:kaml:0.60.0")
 
     // Database drivers
     runtimeOnly("com.mysql:mysql-connector-j:8.4.0")
     runtimeOnly("com.impossibl.pgjdbc-ng:pgjdbc-ng:0.8.9")
-    runtimeOnly("org.mariadb.jdbc:mariadb-java-client:3.3.1")
+    runtimeOnly("org.mariadb.jdbc:mariadb-java-client:3.4.0")
     runtimeOnly("com.h2database:h2:2.2.224")
 }
 
@@ -45,7 +45,7 @@ publishing {
         create<MavenPublication>("maven") {
             groupId = "org.endera.enderalib"
             artifactId = "enderalib"
-            version = "1.0-SNAPSHOT"
+            version = version
 
             from(components["java"])
         }
