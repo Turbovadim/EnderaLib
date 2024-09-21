@@ -18,12 +18,18 @@ repositories {
 val deps = dependencies {
     // Minecraft APIs
     val exposedVersion = "0.53.0"
+    val ktorVersion = "2.3.12"
 
     compileOnly("net.kyori:adventure-text-minimessage:4.16.0")
 
     compileOnly("io.papermc.paper:paper-api:1.20.4-R0.1-SNAPSHOT")
 
     // Exposed
+    api("io.ktor:ktor-client-core:$ktorVersion")
+    api("io.ktor:ktor-client-okhttp:$ktorVersion")
+    api("io.ktor:ktor-client-content-negotiation:$ktorVersion")
+    api("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
+
     api("org.jetbrains.exposed:exposed-core:$exposedVersion")
     api("org.jetbrains.exposed:exposed-dao:$exposedVersion")
     api("org.jetbrains.exposed:exposed-jdbc:$exposedVersion")
@@ -76,6 +82,9 @@ kotlin {
     compilerOptions {
         apiVersion.set(KotlinVersion.KOTLIN_1_7)
     }
+}
+dependencies {
+    implementation("io.ktor:ktor-client-okhttp-jvm:2.3.12")
 }
 
 tasks.withType<JavaCompile> {
