@@ -1,4 +1,4 @@
-//package org.endera.enderalib.experimental
+package org.endera.enderalib.experimental//package org.endera.enderalib.experimental
 //
 //import kotlinx.serialization.KSerializer
 //import org.endera.enderalib.utils.configuration.PluginException

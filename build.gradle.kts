@@ -12,7 +12,11 @@ version = "1.1.0"
 
 repositories {
     mavenCentral()
-    maven("https://repo.papermc.io/repository/maven-public/")
+//    maven("https://repo.papermc.io/repository/maven-public/")
+    maven {
+        name = "papermc"
+        url = uri("https://repo.papermc.io/repository/maven-public/")
+    }
 }
 
 val deps = dependencies {
@@ -22,7 +26,8 @@ val deps = dependencies {
 
     compileOnly("net.kyori:adventure-text-minimessage:4.16.0")
 
-    compileOnly("io.papermc.paper:paper-api:1.20.4-R0.1-SNAPSHOT")
+    compileOnly("dev.folia:folia-api:1.20.4-R0.1-SNAPSHOT")
+//    compileOnly("io.papermc.paper:paper-api:1.20.4-R0.1-SNAPSHOT")
 
     // Exposed
     api("io.ktor:ktor-client-core:$ktorVersion")

@@ -3,6 +3,7 @@ version: ${projectVersion}
 main: org.endera.enderalib.EnderaLib
 api-version: '1.18'
 authors: [EnderaDev]
+folia-supported: true
 commands:
   enderalib:
     description: Get info about plugin version

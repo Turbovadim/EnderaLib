@@ -8,15 +8,18 @@ import org.endera.enderalib.config.ConfigScheme
 import org.endera.enderalib.config.defaultConfig
 import org.endera.enderalib.utils.configuration.PluginException
 import org.endera.enderalib.utils.configuration.configLoadCreationHandler
+import org.endera.enderalib.utils.isFolia
 import java.io.File
 
 internal lateinit var configFile: File
 internal lateinit var config: ConfigScheme
+internal var isFolia: Boolean = false
 
 internal class EnderaLib : JavaPlugin() {
 
     override fun onEnable() {
-        this.logger.info("Plugin is loaded")
+
+        isFolia = isFolia()
 
         configFile = File("${dataFolder}/config.yml")
 
@@ -36,6 +39,7 @@ internal class EnderaLib : JavaPlugin() {
             server.pluginManager.disablePlugin(this)
         }
 
+        this.logger.info("Plugin is loaded")
     }
 
     inner class EnderaLibCommand(private val plugin: EnderaLib) : CommandExecutor {
