@@ -1,8 +1,9 @@
 name: EnderaLib
-version: 1.1.0
+version: 1.2.0
 main: org.endera.enderalib.EnderaLib
 api-version: '1.18'
 authors: [EnderaDev]
+folia-supported: true
 commands:
   enderalib:
     description: Get info about plugin version
