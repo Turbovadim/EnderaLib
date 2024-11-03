@@ -3,12 +3,12 @@ import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 plugins {
     kotlin("jvm") version "2.0.20"
     kotlin("plugin.serialization") version "2.0.20"
-    id("com.gradleup.shadow") version "8.3.0"
+    id("com.gradleup.shadow") version "8.3.3"
     `maven-publish`
 }
 
 group = "org.endera"
-version = "1.2.0"
+version = "1.3.0"
 
 repositories {
     mavenCentral()
@@ -21,8 +21,8 @@ repositories {
 
 val deps = dependencies {
     // Minecraft APIs
-    val exposedVersion = "0.53.0"
-    val ktorVersion = "2.3.12"
+    val exposedVersion = "0.55.0"
+    val ktorVersion = "3.0.0"
 
     compileOnly("net.kyori:adventure-text-minimessage:4.16.0")
 
@@ -41,12 +41,12 @@ val deps = dependencies {
 
     api("com.zaxxer:HikariCP:5.1.0")
 
-    api("org.jetbrains.kotlinx:kotlinx-serialization-core:1.7.1")
+    api("org.jetbrains.kotlinx:kotlinx-serialization-core:1.7.3")
     api("com.charleskorn.kaml:kaml:0.61.0")
 
     // Database drivers
-    runtimeOnly("com.mysql:mysql-connector-j:9.0.0")
-    runtimeOnly("com.impossibl.pgjdbc-ng:pgjdbc-ng:0.8.9")
+    runtimeOnly("com.mysql:mysql-connector-j:9.1.0")
+    runtimeOnly("org.postgresql:postgresql:42.7.4")
     runtimeOnly("org.mariadb.jdbc:mariadb-java-client:3.4.1")
     runtimeOnly("com.h2database:h2:2.3.232")
 }

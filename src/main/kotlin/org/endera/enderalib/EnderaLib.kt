@@ -4,6 +4,7 @@ import org.bukkit.command.Command
 import org.bukkit.command.CommandExecutor
 import org.bukkit.command.CommandSender
 import org.bukkit.plugin.java.JavaPlugin
+import org.endera.enderalib.bstats.MetricsLite
 import org.endera.enderalib.config.ConfigScheme
 import org.endera.enderalib.config.defaultConfig
 import org.endera.enderalib.utils.configuration.PluginException
@@ -13,14 +14,14 @@ import java.io.File
 
 internal lateinit var configFile: File
 internal lateinit var config: ConfigScheme
-internal var isFolia: Boolean = false
+var isFolia: Boolean = false
 
 internal class EnderaLib : JavaPlugin() {
 
     override fun onEnable() {
 
         isFolia = isFolia()
-
+        val metrics = MetricsLite(this, 23669)
         configFile = File("${dataFolder}/config.yml")
 
         getCommand("enderalib")?.setExecutor(EnderaLibCommand(this))

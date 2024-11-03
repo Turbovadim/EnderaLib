@@ -1,6 +1,6 @@
 package org.endera.enderalib.utils
 
-fun isFolia(): Boolean {
+internal fun isFolia(): Boolean {
     try {
         Class.forName("io.papermc.paper.threadedregions.RegionizedServer")
         return true
