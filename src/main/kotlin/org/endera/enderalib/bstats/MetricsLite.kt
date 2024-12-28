@@ -106,7 +106,6 @@ class MetricsLite(plugin: Plugin, pluginId: Int) {
 
                 CoroutineScope(bukkitDispatcher).launch {
                     submitData()
-                    println("ЕБАЛ БСТАТ")
                 }
 
                 // Nevertheless we want our code to run in the Bukkit main thread, so we have to use the Bukkit scheduler
@@ -187,7 +186,6 @@ class MetricsLite(plugin: Plugin, pluginId: Int) {
         // Search for all other bStats Metrics classes to get their plugin data
         for (service in Bukkit.getServicesManager().knownServices) {
             try {
-                println("ЕБАЛ БСТАТ2")
                 service.getField("B_STATS_VERSION") // Our identifier :)
 
                 for (provider in Bukkit.getServicesManager().getRegistrations(service)) {
@@ -204,7 +202,6 @@ class MetricsLite(plugin: Plugin, pluginId: Int) {
                                     val jsonString = jsonStringGetter.invoke(plugin) as String
                                     val `object` = JsonParser().parse(jsonString).asJsonObject
                                     pluginData.add(`object`)
-                                    println("ЕБАЛ БСТАТ3")
                                 }
                             } catch (e: ClassNotFoundException) {
                                 // minecraft version 1.14+
