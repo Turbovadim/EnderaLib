@@ -14,4 +14,5 @@ package org.endera.enderalib.utils
  * val paginatedList = list.paginate(2) // Result: [[1, 2], [3, 4], [5]]
  * ```
  */
+@Suppress("unused")
 fun <T> List<T>.paginate(pageSize: Int): List<List<T>> = this.chunked(pageSize)

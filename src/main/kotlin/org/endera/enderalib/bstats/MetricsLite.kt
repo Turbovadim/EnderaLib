@@ -21,16 +21,14 @@ import java.util.logging.Level
 import java.util.zip.GZIPOutputStream
 import javax.net.ssl.HttpsURLConnection
 
-class MetricsLite(plugin: Plugin, pluginId: Int) {
+class MetricsLite(// The plugin
+    private val plugin: Plugin, // The plugin id
+    private val pluginId: Int
+) {
     val isEnabled: Boolean
-
-    // The plugin
-    private val plugin: Plugin
 
     private val bukkitDispatcher: BukkitDispatcher = BukkitDispatcher(plugin)
 
-    // The plugin id
-    private val pluginId: Int
     /**
      * Class constructor.
      *
@@ -39,8 +37,6 @@ class MetricsLite(plugin: Plugin, pluginId: Int) {
      * It can be found at [What is my plugin id?](https://bstats.org/what-is-my-plugin-id)
      */
     init {
-        this.plugin = plugin
-        this.pluginId = pluginId
 
         val bStatsFolder = File(plugin.dataFolder.parentFile, "bStats")
         val configFile = File(bStatsFolder, "config.yml")
@@ -64,7 +60,7 @@ class MetricsLite(plugin: Plugin, pluginId: Int) {
             ).copyDefaults(true)
             try {
                 config.save(configFile)
-            } catch (ignored: IOException) {
+            } catch (_: IOException) {
             }
         }
 
@@ -82,7 +78,7 @@ class MetricsLite(plugin: Plugin, pluginId: Int) {
                     service.getField("3.0.2") // Our identifier :)
                     found = true // We aren't the first
                     break
-                } catch (ignored: NoSuchFieldException) {
+                } catch (_: NoSuchFieldException) {
                 }
             }
             Bukkit.getServicesManager().register(MetricsLite::class.java, this, plugin, ServicePriority.Normal)
@@ -144,7 +140,7 @@ class MetricsLite(plugin: Plugin, pluginId: Int) {
                     (onlinePlayersMethod.invoke(Bukkit.getServer()) as Collection<*>).size
                 else
                     (onlinePlayersMethod.invoke(Bukkit.getServer()) as Array<*>).size
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 playerAmount = Bukkit.getOnlinePlayers().size // Just use the new method if the Reflection failed
             }
             val onlineMode = if (Bukkit.getOnlineMode()) 1 else 0
@@ -210,13 +206,13 @@ class MetricsLite(plugin: Plugin, pluginId: Int) {
                                 }
                             }
                         }
-                    } catch (ignored: NullPointerException) {
-                    } catch (ignored: NoSuchMethodException) {
-                    } catch (ignored: IllegalAccessException) {
-                    } catch (ignored: InvocationTargetException) {
+                    } catch (_: NullPointerException) {
+                    } catch (_: NoSuchMethodException) {
+                    } catch (_: IllegalAccessException) {
+                    } catch (_: InvocationTargetException) {
                     }
                 }
-            } catch (ignored: NoSuchFieldException) {
+            } catch (_: NoSuchFieldException) {
             }
         }
 

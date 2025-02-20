@@ -4,6 +4,7 @@ import org.bukkit.command.CommandSender
 import org.endera.enderalib.adventure.stringToComponent
 import org.endera.enderalib.config
 
+@Suppress("unused")
 fun CommandSender.checkPermission(
     permission: String,
     executable: () -> Unit
@@ -13,4 +14,5 @@ fun CommandSender.checkPermission(
     } else {
         sendMessage(config.messages.noPermission.replace("{prefix}", config.messages.prefix).stringToComponent())
     }
+
 }

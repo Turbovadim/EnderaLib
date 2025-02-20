@@ -21,6 +21,7 @@ fun String.stringToComponent(): Component {
     return minimessage.deserialize(this)
 }
 
+@Suppress("unused")
 fun Component.componentToString(): String {
     return minimessage.serialize(this)
 }
