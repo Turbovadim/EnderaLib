@@ -18,7 +18,7 @@ import java.util.logging.Logger
  * @return The loaded or newly created configuration object of type [T].
  * @throws PluginException if the configuration file cannot be generated or re-generated upon failure to load.
  */
-fun <T> configLoadCreationHandler(
+inline fun <reified T : Any> configLoadCreationHandler(
     configFile: File,
     dataFolder: File,
     defaultConfig: T,
@@ -26,35 +26,64 @@ fun <T> configLoadCreationHandler(
     logger: Logger,
 ): T {
     if (!configFile.exists()) {
-        try {
-            dataFolder.mkdirs()
-            writeConfig(configFile, defaultConfig, serializer)
-        } catch (e: Exception) {
-            logger.severe("Failed to generate config!")
-            logger.severe(e.message ?: "Unknown Error")
-            throw PluginException("Failed to generate config", e)
-        }
+        logger.info("Configuration file not found, creating new one.")
+        return createNewConfig(configFile, dataFolder, defaultConfig, serializer, logger)
     }
 
     return try {
-        val loadedConfig = loadConfig(configFile, serializer)
-        logger.info("Configuration successfully loaded!")
-        return loadedConfig
+        loadConfig(configFile, serializer).also {
+            logger.info("Configuration successfully loaded!")
+        }
     } catch (e: Exception) {
-        logger.severe(e.message ?: "Unknown Error")
-        logger.severe("Failed to load the configuration!")
+        logger.severe("Error while loading configuration: ${e.message ?: "Unknown error"}")
+        logger.warning("Attempting to rename invalid configuration file and create a new one.")
         try {
-            logger.warning("Trying to generate new configuration")
             renameInvalidConfig(configFile)
-            writeConfig(configFile, defaultConfig, serializer)
-            loadConfig(configFile, serializer).also {
+            return createNewConfig(configFile, dataFolder, defaultConfig, serializer, logger).also {
                 logger.info("Configuration successfully updated!")
             }
-        } catch (e: Exception) {
-            logger.severe("Error when re-generating the configuration!")
-            logger.severe(e.message ?: "Unknown Error")
-            throw PluginException("Failed to regenerate config", e)
+        } catch (e2: Exception) {
+            logger.severe("Error while regenerating configuration: ${e2.message ?: "Unknown error"}")
+            throw PluginException("Failed to regenerate configuration", e2)
         }
+    }
+}
+
+/**
+ * Creates a new configuration file using the default configuration.
+ *
+ * @param T The type of the configuration object.
+ * @param configFile The configuration file to be created.
+ * @param dataFolder The data folder of the plugin, used to ensure its existence.
+ * @param defaultConfig The default configuration instance.
+ * @param serializer The serializer for the configuration object.
+ * @param logger The logger used for logging messages.
+ * @return The newly created and loaded configuration object of type [T].
+ * @throws PluginException if creation or loading fails.
+ */
+inline fun <reified T : Any> createNewConfig(
+    configFile: File,
+    dataFolder: File,
+    defaultConfig: T,
+    serializer: KSerializer<T>,
+    logger: Logger,
+): T {
+    if (!dataFolder.exists() && !dataFolder.mkdirs()) {
+        throw PluginException("Failed to create data folder: ${dataFolder.absolutePath}")
+    }
+    try {
+        writeConfigWithComments(configFile, defaultConfig, serializer)
+    } catch (e: Exception) {
+        logger.severe("Error while creating new configuration: ${e.message ?: "Unknown error"}")
+        throw PluginException("Failed to create configuration", e)
+    }
+    return try {
+        loadConfig(configFile, serializer).also {
+            logger.info("Configuration successfully created and loaded!")
+        }
+    } catch (e: Exception) {
+        logger.severe("Error while loading the created configuration: ${e.message ?: "Unknown error"}")
+        throw PluginException("Failed to load configuration after creation", e)
     }
 }
 
@@ -62,6 +91,6 @@ fun <T> configLoadCreationHandler(
  * Exception thrown by plugin operations when critical errors occur, such as failure to load or generate a configuration file.
  *
  * @param message The detail message string of the exception.
- * @param cause The cause of the exception (which is saved for later retrieval by the [Throwable.getCause()] method). (A null value is permitted, and indicates that the cause is nonexistent or unknown.)
+ * @param cause The cause of the exception (which is saved for later retrieval by the Throwable.getCause() method).
  */
 class PluginException(message: String, cause: Throwable? = null) : Exception(message, cause)

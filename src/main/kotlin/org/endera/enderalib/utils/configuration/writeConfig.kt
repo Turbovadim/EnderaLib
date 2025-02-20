@@ -1,5 +1,6 @@
 package org.endera.enderalib.utils.configuration
 
+import addComments
 import com.charleskorn.kaml.Yaml
 import com.charleskorn.kaml.YamlConfiguration
 import com.charleskorn.kaml.YamlNamingStrategy
@@ -16,17 +17,18 @@ import java.io.File
  * @param yamlConfiguration Optional. The YAML configuration. Defaults to non-strict mode.
  * @throws Exception on file writing or serialization errors.
  */
-fun <T> writeConfig(
+inline fun <reified T : Any> writeConfigWithComments(
     file: File,
     config: T,
     serializer: KSerializer<T>,
     yamlConfiguration: YamlConfiguration = YamlConfiguration(
         strictMode = false,
         breakScalarsAt = 400,
-        yamlNamingStrategy = YamlNamingStrategy.KebabCase,
+        yamlNamingStrategy = YamlNamingStrategy.KebabCase
     )
 ) {
     val yaml = Yaml(configuration = yamlConfiguration)
-    val text = yaml.encodeToString(serializer, config)
-    file.writeText(text)
+    val serialized = yaml.encodeToString(serializer, config)
+    val withComments = addComments<T>(serialized)
+    file.writeText(withComments)
 }
