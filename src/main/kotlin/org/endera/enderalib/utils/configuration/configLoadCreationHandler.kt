@@ -1,22 +1,27 @@
 package org.endera.enderalib.utils.configuration
 
+import com.charleskorn.kaml.YamlConfiguration
+import com.charleskorn.kaml.YamlNamingStrategy
 import kotlinx.serialization.KSerializer
 import java.io.File
 import java.util.logging.Logger
 
 /**
- * Handles the loading or creation of a plugin configuration file.
- * If the configuration file does not exist, it will attempt to create the file and write the default configuration.
- * If loading the existing configuration fails, it will attempt to rename the invalid configuration file and regenerate it from the default configuration.
+ * Loads or creates a plugin configuration file and merges it with the default configuration.
+ *
+ * The function first attempts to load the configuration in strict mode. If that fails,
+ * it falls back to non-strict mode. Once loaded, the configuration is merged with the default
+ * configuration to ensure that any missing properties (including in nested objects) are filled in.
+ * If loading fails altogether, the invalid configuration file is renamed and a new one is generated.
  *
  * @param T The type of the configuration object.
- * @param configFile The configuration file to be loaded or created.
- * @param dataFolder The data folder of the plugin, used to ensure its existence for config file creation.
- * @param defaultConfig The default configuration instance to be used if the config file doesn't exist or needs to be recreated.
- * @param serializer The serializer for the configuration object, used for reading from and writing to the file.
- * @param logger The logger used to log errors or warnings during the operation.
- * @return The loaded or newly created configuration object of type [T].
- * @throws PluginException if the configuration file cannot be generated or re-generated upon failure to load.
+ * @param configFile The configuration file to load or create.
+ * @param dataFolder The plugin's data folder, ensuring it exists for file creation.
+ * @param defaultConfig The default configuration instance used when creating or regenerating the configuration file.
+ * @param serializer The serializer for reading from and writing to the configuration file.
+ * @param logger The logger used for reporting errors and warnings during the process.
+ * @return The loaded or newly created (and merged) configuration object of type [T].
+ * @throws PluginException if the configuration file cannot be generated or regenerated.
  */
 inline fun <reified T : Any> configLoadCreationHandler(
     configFile: File,
@@ -30,36 +35,64 @@ inline fun <reified T : Any> configLoadCreationHandler(
         return createNewConfig(configFile, dataFolder, defaultConfig, serializer, logger)
     }
 
-    return try {
-        loadConfig(configFile, serializer).also {
-            logger.info("Configuration successfully loaded!")
+    var fileConfig: T? = null
+    // Пытаемся загрузить в строгом режиме
+    try {
+        fileConfig = loadConfig(
+            configFile, serializer,
+            YamlConfiguration(
+                strictMode = true,
+                breakScalarsAt = 400,
+                yamlNamingStrategy = YamlNamingStrategy.KebabCase
+            )
+        ).also {
+            logger.info("Configuration successfully loaded in strict mode!")
         }
     } catch (e: Exception) {
-        logger.severe("Error while loading configuration: ${e.message ?: "Unknown error"}")
-        logger.warning("Attempting to rename invalid configuration file and create a new one.")
+        logger.warning("Parsing in strict mode failed: ${e.message ?: "Unknown error"}.")
+    }
+
+    // Если строгое чтение не удалось, выполняем динамическое слияние
+    if (fileConfig == null) {
+        try {
+            logger.info("Attempting dynamic merge of configuration.")
+            val fileContent = configFile.readText(Charsets.UTF_8)
+            fileConfig = mergeYamlConfigs(fileContent, defaultConfig, serializer).also {
+                logger.info("Dynamic merge successful!")
+            }
+        } catch (e: Exception) {
+            logger.severe("Dynamic merge failed: ${e.message ?: "Unknown error"}.")
+        }
+    }
+
+    // Если не удалось восстановить конфигурацию, переименовываем файл и создаём новый
+    if (fileConfig == null) {
+        logger.warning("Renaming invalid configuration file and creating a new one.")
         try {
             renameInvalidConfig(configFile)
             return createNewConfig(configFile, dataFolder, defaultConfig, serializer, logger).also {
-                logger.info("Configuration successfully updated!")
+                logger.info("Configuration successfully regenerated!")
             }
-        } catch (e2: Exception) {
-            logger.severe("Error while regenerating configuration: ${e2.message ?: "Unknown error"}")
-            throw PluginException("Failed to regenerate configuration", e2)
+        } catch (e: Exception) {
+            logger.severe("Error while regenerating configuration: ${e.message ?: "Unknown error"}.")
+            throw PluginException("Failed to regenerate configuration", e)
         }
     }
+
+    // Для гарантии, что в объекте нет отсутствующих полей, выполняем динамическое объединение
+    // даже если конфигурация была успешно загружена
+    val mergedConfig: T = mergeYamlConfigs(
+        configToYaml(fileConfig, serializer),
+        defaultConfig,
+        serializer
+    )
+    // Записываем объединённый конфиг обратно в файл
+    writeConfigWithComments(configFile, mergedConfig, serializer)
+    return mergedConfig
 }
 
 /**
- * Creates a new configuration file using the default configuration.
- *
- * @param T The type of the configuration object.
- * @param configFile The configuration file to be created.
- * @param dataFolder The data folder of the plugin, used to ensure its existence.
- * @param defaultConfig The default configuration instance.
- * @param serializer The serializer for the configuration object.
- * @param logger The logger used for logging messages.
- * @return The newly created and loaded configuration object of type [T].
- * @throws PluginException if creation or loading fails.
+ * Создаёт новый файл конфигурации, используя дефолтную конфигурацию.
  */
 inline fun <reified T : Any> createNewConfig(
     configFile: File,
@@ -86,7 +119,6 @@ inline fun <reified T : Any> createNewConfig(
         throw PluginException("Failed to load configuration after creation", e)
     }
 }
-
 /**
  * Exception thrown by plugin operations when critical errors occur, such as failure to load or generate a configuration file.
  *

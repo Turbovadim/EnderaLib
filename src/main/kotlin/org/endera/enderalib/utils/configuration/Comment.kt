@@ -1,5 +1,5 @@
 package org.endera.enderalib.utils.configuration
 
-@Target(AnnotationTarget.PROPERTY, AnnotationTarget.FIELD)
+@Target(AnnotationTarget.PROPERTY)
 @Retention(AnnotationRetention.RUNTIME)
 annotation class Comment(val text: String)

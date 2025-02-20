@@ -6,6 +6,7 @@ import org.bukkit.command.CommandSender
 import org.bukkit.plugin.java.JavaPlugin
 import org.endera.enderalib.bstats.MetricsLite
 import org.endera.enderalib.config.ConfigScheme
+import org.endera.enderalib.config.defaultConfig
 import org.endera.enderalib.utils.configuration.PluginException
 import org.endera.enderalib.utils.configuration.configLoadCreationHandler
 import org.endera.enderalib.utils.isFolia
@@ -29,12 +30,11 @@ internal class EnderaLib : JavaPlugin() {
             val loadedConfig = configLoadCreationHandler(
                 configFile = configFile,
                 dataFolder = dataFolder,
-                defaultConfig = ConfigScheme(),
+                defaultConfig = defaultConfig,
                 logger = logger,
                 serializer = ConfigScheme.serializer()
             )
             org.endera.enderalib.config = loadedConfig
-            println(loadedConfig.sexSexer)
         } catch (e: PluginException) {
             logger.severe("Critical error loading configuration: ${e.message}")
             server.pluginManager.disablePlugin(this)

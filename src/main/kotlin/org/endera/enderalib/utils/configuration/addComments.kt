@@ -1,4 +1,5 @@
-import org.endera.enderalib.utils.configuration.Comment
+package org.endera.enderalib.utils.configuration
+
 import kotlin.reflect.KClass
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.full.findAnnotation

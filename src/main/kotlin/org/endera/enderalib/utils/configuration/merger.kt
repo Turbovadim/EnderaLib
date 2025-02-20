@@ -1,173 +1,100 @@
-//import com.charleskorn.kaml.Yaml
-//import com.charleskorn.kaml.YamlConfiguration
-//import com.charleskorn.kaml.YamlNamingStrategy
-//import kotlinx.serialization.KSerializer
-//import kotlinx.serialization.Serializable
-//import kotlinx.serialization.json.Json
-//import kotlinx.serialization.json.JsonElement
-//import kotlinx.serialization.json.JsonObject
-//import java.io.File
-//import java.util.logging.Logger
-//
-//// -----------------------
-//// 1. Определение конфигурации
-//// -----------------------
-//
-//@Serializable
-//data class MyConfig(
-//    val field1: String = "defaultValue1",
-//    val field2: Int = 42,
-//    val newField: Boolean = true,
-//    val nested: NestedConfig = NestedConfig()
-//)
-//
-//@Serializable
-//data class NestedConfig(
-//    val nestedField: String = "nestedDefault"
-//)
-//
-//// -----------------------
-//// 2. Функция для рекурсивного мерджинга JsonObject
-//// -----------------------
-//
-///**
-// * Рекурсивно объединяет два [JsonObject]:
-// * для каждого ключа берётся значение из [oldObj], если оно присутствует, иначе используется значение из [defaultObj].
-// */
-//fun mergeJsonObjects(defaultObj: JsonObject, oldObj: JsonObject): JsonObject {
-//    val merged = mutableMapOf<String, JsonElement>()
-//    // Проходим по всем ключам дефолтного объекта
-//    for ((key, defaultValue) in defaultObj) {
-//        val oldValue = oldObj[key]
-//        merged[key] = if (oldValue != null) {
-//            // Если оба значения – объекты, объединяем их рекурсивно
-//            if (defaultValue is JsonObject && oldValue is JsonObject) {
-//                mergeJsonObjects(defaultValue, oldValue)
-//            } else {
-//                // В остальных случаях берём значение из старой конфигурации
-//                oldValue
-//            }
-//        } else {
-//            // Если в старой конфигурации ключ отсутствует, используем дефолтное значение
-//            defaultValue
-//        }
-//    }
-//    return JsonObject(merged)
-//}
-//
-///**
-// * Объединяет [defaultConfig] и [oldConfig] для типа [T] с использованием JSON-представления.
-// * Если значение присутствует в старом конфиге, оно будет использовано, а отсутствующие — взяты из дефолтного.
-// */
-//fun <T> mergeConfigs(
-//    defaultConfig: T,
-//    oldConfig: T,
-//    serializer: KSerializer<T>
-//): T {
-//    val json = Json { ignoreUnknownKeys = true }
-//    val defaultJsonElement = json.encodeToJsonElement(serializer, defaultConfig)
-//    val oldJsonElement = json.encodeToJsonElement(serializer, oldConfig)
-//    if (defaultJsonElement is JsonObject && oldJsonElement is JsonObject) {
-//        val mergedJson = mergeJsonObjects(defaultJsonElement, oldJsonElement)
-//        return json.decodeFromJsonElement(serializer, mergedJson)
-//    } else {
-//        // Если конфигурация не представлена в виде объекта – возвращаем старую версию
-//        return oldConfig
-//    }
-//}
-//
-//// -----------------------
-//// 3. Функции для работы с YAML (чтение и запись)
-//// -----------------------
-//
-//private val yamlConfig = YamlConfiguration(
-//    strictMode = true,
-//    breakScalarsAt = 400,
-//    yamlNamingStrategy = YamlNamingStrategy.KebabCase
-//)
-//
-//fun <T> loadYamlConfig(file: File, serializer: KSerializer<T>): T {
-//    val yaml = Yaml(configuration = yamlConfig)
-//    val text = file.readText(Charsets.UTF_8)
-//    return yaml.decodeFromString(serializer, text)
-//}
-//
-//fun <T> writeYamlConfig(file: File, config: T, serializer: KSerializer<T>) {
-//    val yaml = Yaml(configuration = yamlConfig)
-//    val text = yaml.encodeToString(serializer, config)
-//    file.writeText(text)
-//}
-//
-//// -----------------------
-//// 4. Обработчик загрузки и мерджинга конфигурации
-//// -----------------------
-//
-///**
-// * Загружает конфигурацию из файла, выполняет мерджинг с дефолтной конфигурацией,
-// * обновляет файл и возвращает итоговую конфигурацию.
-// *
-// * Если файл конфигурации отсутствует, он будет создан с дефолтными значениями.
-// */
-//fun <T> configLoadMergeHandler(
-//    configFile: File,
-//    dataFolder: File,
-//    defaultConfig: T,
-//    serializer: KSerializer<T>,
-//    logger: Logger
-//): T {
-//    // Если файл не существует, создаём его с дефолтной конфигурацией
-//    if (!configFile.exists()) {
-//        try {
-//            dataFolder.mkdirs()
-//            writeYamlConfig(configFile, defaultConfig, serializer)
-//            logger.info("Default configuration generated at ${configFile.absolutePath}")
-//            return defaultConfig
-//        } catch (e: Exception) {
-//            logger.severe("Failed to generate config: ${e.message}")
-//            throw Exception("Failed to generate config", e)
-//        }
-//    }
-//
-//    // Пытаемся загрузить старую конфигурацию
-//    val oldConfig = try {
-//        loadYamlConfig(configFile, serializer)
-//    } catch (e: Exception) {
-//        logger.severe("Failed to load config: ${e.message}")
-//        throw Exception("Failed to load config", e)
-//    }
-//
-//    // Мерджим старую конфигурацию с дефолтной
-//    val mergedConfig = mergeConfigs(defaultConfig, oldConfig, serializer)
-//    // Обновляем файл объединённой конфигурацией
-//    try {
-//        writeYamlConfig(configFile, mergedConfig, serializer)
-//        logger.info("Configuration merged and updated at ${configFile.absolutePath}")
-//    } catch (e: Exception) {
-//        logger.severe("Failed to write merged config: ${e.message}")
-//    }
-//    return mergedConfig
-//}
-//
-//// -----------------------
-//// 5. Пример использования
-//// -----------------------
-//
-//fun test() {
-//    val logger = Logger.getLogger("ConfigLogger")
-//    val dataFolder = File("config")
-//    val configFile = File(dataFolder, "config.yml")
-//
-//    // Дефолтная конфигурация (с новыми полями и значениями по умолчанию)
-//    val defaultConfig = MyConfig()
-//
-//    // Загружаем конфигурацию с мерджингом
-//    val mergedConfig = configLoadMergeHandler(
-//        configFile,
-//        dataFolder,
-//        defaultConfig,
-//        MyConfig.serializer(),
-//        logger
-//    )
-//
-//    println("Merged config: $mergedConfig")
-//}
+package org.endera.enderalib.utils.configuration
+
+import com.charleskorn.kaml.Yaml
+import com.charleskorn.kaml.YamlConfiguration
+import com.charleskorn.kaml.YamlList
+import com.charleskorn.kaml.YamlMap
+import com.charleskorn.kaml.YamlNamingStrategy
+import com.charleskorn.kaml.YamlNode
+import com.charleskorn.kaml.YamlPath
+import com.charleskorn.kaml.YamlScalar
+import kotlinx.serialization.KSerializer
+
+/**
+ * Универсальная функция для преобразования объекта конфигурации в YAML-строку.
+ */
+fun <T> configToYaml(config: T, serializer: KSerializer<T>): String {
+    val yaml = Yaml(
+        configuration = YamlConfiguration(
+            strictMode = false,
+            breakScalarsAt = 400,
+            yamlNamingStrategy = YamlNamingStrategy.KebabCase
+        )
+    )
+    return yaml.encodeToString(serializer, config)
+}
+
+/**
+ * Объединяет YAML-представление содержимого файла и дефолтного объекта.
+ *
+ * @param fileContent Сырые данные файла конфигурации.
+ * @param defaultConfig Дефолтный объект конфигурации.
+ * @param serializer Сериализатор для типа конфигурации.
+ * @return Объект конфигурации типа [T] после объединения.
+ */
+fun <T> mergeYamlConfigs(
+    fileContent: String,
+    defaultConfig: T,
+    serializer: KSerializer<T>
+): T {
+    val yaml = Yaml(
+        configuration = YamlConfiguration(
+            strictMode = false,
+            breakScalarsAt = 400,
+            yamlNamingStrategy = YamlNamingStrategy.KebabCase
+        )
+    )
+    // Декодируем содержимое файла в динамическое представление
+    val fileNode = yaml.decodeFromString(YamlNode.serializer(), fileContent)
+    // Кодируем дефолтный объект в YAML и декодируем в динамическое представление
+    val defaultYamlString = yaml.encodeToString(serializer, defaultConfig)
+    val defaultNode = yaml.decodeFromString(YamlNode.serializer(), defaultYamlString)
+    // Объединяем два YAML-дерева
+    val mergedNode = mergeYamlNodes(fileNode, defaultNode)
+    // Преобразуем объединённое дерево обратно в YAML-строку и декодируем в объект конфигурации
+    val mergedYamlString = yaml.encodeToString(YamlNode.serializer(), mergedNode)
+    return yaml.decodeFromString(serializer, mergedYamlString)
+}
+
+/**
+ * Рекурсивно объединяет два YAML-дерева (YamlNode).
+ *
+ * Если оба узла являются маппингами, для каждого ключа:
+ *   - Если значение присутствует в fileNode, объединяет его с дефолтным значением.
+ *   - Иначе используется дефолтное значение.
+ * Для последовательностей используется значение из fileNode.
+ * Для остальных случаев возвращается fileNode.
+ */
+/**
+ * Рекурсивно объединяет два YAML-дерева (YamlNode).
+ *
+ * Если оба узла являются мапами, для каждого ключа:
+ *   - Если значение присутствует в fileNode, объединяет его с дефолтным значением.
+ *   - Иначе используется дефолтное значение.
+ * Для списков используется значение из fileNode.
+ * Для остальных случаев возвращается fileNode.
+ */
+fun mergeYamlNodes(fileNode: YamlNode, defaultNode: YamlNode): YamlNode {
+    return when {
+        fileNode is YamlMap && defaultNode is YamlMap -> {
+            val mergedEntries = mutableMapOf<YamlScalar, YamlNode>()
+            // Обходим ключи дефолтного мапа
+            defaultNode.entries.forEach { (key, defaultValue) ->
+                val fileValue = fileNode.entries[key]
+                mergedEntries[key] = if (fileValue != null) mergeYamlNodes(fileValue, defaultValue) else defaultValue
+            }
+            // Добавляем дополнительные ключи из fileNode
+            fileNode.entries.forEach { (key, fileValue) ->
+                if (!mergedEntries.containsKey(key)) {
+                    mergedEntries[key] = fileValue
+                }
+            }
+            YamlMap(mergedEntries, path = YamlPath.root)
+        }
+        fileNode is YamlList && defaultNode is YamlList -> {
+            // Для списков используем значение из файла
+            fileNode
+        }
+        else -> fileNode // Для скаляров или несовпадающих типов — используем значение из файла
+    }
+}
