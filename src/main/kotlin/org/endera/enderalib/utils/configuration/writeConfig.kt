@@ -5,21 +5,24 @@ import com.charleskorn.kaml.YamlConfiguration
 import com.charleskorn.kaml.YamlNamingStrategy
 import kotlinx.serialization.KSerializer
 import java.io.File
+import kotlin.reflect.KClass
 
 /**
- * Writes the given configuration object to a file in YAML format.
+ * Записывает объект конфигурации в файл в формате YAML, добавляя комментарии.
  *
- * @param T The type of the configuration object.
- * @param file The file where the configuration will be written.
- * @param config The configuration object to be written.
- * @param serializer The serializer for the configuration object type.
- * @param yamlConfiguration Optional. The YAML configuration. Defaults to non-strict mode.
- * @throws Exception on file writing or serialization errors.
+ * @param T Тип объекта конфигурации.
+ * @param file Файл, в который будет записана конфигурация.
+ * @param config Объект конфигурации для записи.
+ * @param serializer Сериализатор для типа конфигурации.
+ * @param clazz Класс типа конфигурации (для замены reified).
+ * @param yamlConfiguration Параметры конфигурации YAML (по умолчанию нестрогий режим).
+ * @throws Exception при ошибках записи или сериализации.
  */
-inline fun <reified T : Any> writeConfigWithComments(
+fun <T : Any> writeConfigWithComments(
     file: File,
     config: T,
     serializer: KSerializer<T>,
+    clazz: KClass<T>,
     yamlConfiguration: YamlConfiguration = YamlConfiguration(
         strictMode = false,
         breakScalarsAt = 400,
@@ -28,6 +31,6 @@ inline fun <reified T : Any> writeConfigWithComments(
 ) {
     val yaml = Yaml(configuration = yamlConfiguration)
     val serialized = yaml.encodeToString(serializer, config)
-    val withComments = addComments<T>(serialized)
+    val withComments = addComments(serialized, clazz)
     file.writeText(withComments)
 }

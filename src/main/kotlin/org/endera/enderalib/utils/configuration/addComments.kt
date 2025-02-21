@@ -36,6 +36,14 @@ fun addCommentsForClass(clazz: KClass<*>, yamlText: String, baseIndent: String =
     return result
 }
 
-inline fun <reified T : Any> addComments(yamlText: String): String {
-    return addCommentsForClass(T::class, yamlText, "")
+/**
+ * Добавляет комментарии в YAML-текст, используя информацию из аннотаций класса.
+ *
+ * @param T Тип объекта конфигурации.
+ * @param yamlText Исходный YAML-текст.
+ * @param clazz Класс типа конфигурации.
+ * @return YAML-текст с добавленными комментариями.
+ */
+fun <T : Any> addComments(yamlText: String, clazz: KClass<T>): String {
+    return addCommentsForClass(clazz, yamlText, "")
 }
