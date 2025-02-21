@@ -59,15 +59,6 @@ fun <T> mergeYamlConfigs(
 /**
  * Рекурсивно объединяет два YAML-дерева (YamlNode).
  *
- * Если оба узла являются маппингами, для каждого ключа:
- *   - Если значение присутствует в fileNode, объединяет его с дефолтным значением.
- *   - Иначе используется дефолтное значение.
- * Для последовательностей используется значение из fileNode.
- * Для остальных случаев возвращается fileNode.
- */
-/**
- * Рекурсивно объединяет два YAML-дерева (YamlNode).
- *
  * Если оба узла являются мапами, для каждого ключа:
  *   - Если значение присутствует в fileNode, объединяет его с дефолтным значением.
  *   - Иначе используется дефолтное значение.
@@ -78,15 +69,16 @@ fun mergeYamlNodes(fileNode: YamlNode, defaultNode: YamlNode): YamlNode {
     return when {
         fileNode is YamlMap && defaultNode is YamlMap -> {
             val mergedEntries = mutableMapOf<YamlScalar, YamlNode>()
-            // Обходим ключи дефолтного мапа
-            defaultNode.entries.forEach { (key, defaultValue) ->
-                val fileValue = fileNode.entries[key]
-                mergedEntries[key] = if (fileValue != null) mergeYamlNodes(fileValue, defaultValue) else defaultValue
+            // Обходим ключи дефолтного мапа, используя сравнение по содержимому
+            defaultNode.entries.forEach { (defaultKey, defaultValue) ->
+                val matchingFileKey = fileNode.entries.keys.find { it.content == defaultKey.content }
+                val fileValue = matchingFileKey?.let { fileNode.entries[it] }
+                mergedEntries[defaultKey] = if (fileValue != null) mergeYamlNodes(fileValue, defaultValue) else defaultValue
             }
-            // Добавляем дополнительные ключи из fileNode
-            fileNode.entries.forEach { (key, fileValue) ->
-                if (!mergedEntries.containsKey(key)) {
-                    mergedEntries[key] = fileValue
+            // Добавляем дополнительные ключи из fileNode, которых нет в mergedEntries по содержимому ключа
+            fileNode.entries.forEach { (fileKey, fileValue) ->
+                if (!mergedEntries.keys.any { it.content == fileKey.content }) {
+                    mergedEntries[fileKey] = fileValue
                 }
             }
             YamlMap(mergedEntries, path = YamlPath.root)
