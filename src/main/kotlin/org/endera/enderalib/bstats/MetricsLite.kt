@@ -3,12 +3,6 @@ package org.endera.enderalib.bstats
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
-import io.ktor.client.*
-import io.ktor.client.engine.okhttp.*
-import io.ktor.client.request.*
-import io.ktor.client.statement.*
-import io.ktor.http.*
-import io.ktor.http.content.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -20,34 +14,69 @@ import org.endera.enderalib.utils.async.BukkitDispatcher
 import org.endera.enderalib.utils.async.ioDispatcher
 import java.io.*
 import java.lang.reflect.InvocationTargetException
+import java.net.URL
 import java.nio.charset.StandardCharsets
 import java.util.*
 import java.util.logging.Level
 import java.util.zip.GZIPOutputStream
+import javax.net.ssl.HttpsURLConnection
 
-class MetricsLite(
-    private val plugin: Plugin,
+class MetricsLite(// The plugin
+    private val plugin: Plugin, // The plugin id
     private val pluginId: Int
 ) {
-    private val isEnabled: Boolean
+    val isEnabled: Boolean
+
     private val bukkitDispatcher: BukkitDispatcher = BukkitDispatcher(plugin)
 
+    /**
+     * Class constructor.
+     *
+     * @param plugin The plugin which stats should be submitted.
+     * @param pluginId The id of the plugin.
+     * It can be found at [What is my plugin id?](https://bstats.org/what-is-my-plugin-id)
+     */
     init {
-        val config = loadOrCreateConfig()
-        // Загружаем параметры конфигурации
+
+        val bStatsFolder = File(plugin.dataFolder.parentFile, "bStats")
+        val configFile = File(bStatsFolder, "config.yml")
+        val config = YamlConfiguration.loadConfiguration(configFile)
+
+        if (!config.isSet("serverUuid")) {
+
+            config.addDefault("enabled", true)
+            config.addDefault("serverUuid", UUID.randomUUID().toString())
+            config.addDefault("logFailedRequests", false)
+            config.addDefault("logSentData", false)
+            config.addDefault("logResponseStatusText", false)
+
+            config.options().header(
+                """
+                    bStats collects some data for plugin authors like how many servers are using their plugins.
+                    To honor their work, you should not disable it.
+                    This has nearly no effect on the server performance!
+                    Check out https://bStats.org/ to learn more :)
+                    """.trimIndent()
+            ).copyDefaults(true)
+            try {
+                config.save(configFile)
+            } catch (_: IOException) {
+            }
+        }
+
+        // Load the data
         serverUUID = config.getString("serverUuid")
         logFailedRequests = config.getBoolean("logFailedRequests", false)
         isEnabled = config.getBoolean("enabled", true)
         logSentData = config.getBoolean("logSentData", false)
         logResponseStatusText = config.getBoolean("logResponseStatusText", false)
-
         if (isEnabled) {
             var found = false
-            // Проверка на регистрацию других Metrics-классов
+            // Search for all other bStats Metrics classes to see if we are the first one
             for (service in Bukkit.getServicesManager().knownServices) {
                 try {
-                    service.getField("3.0.2") // Наш идентификатор :)
-                    found = true
+                    service.getField("3.0.2") // Our identifier :)
+                    found = true // We aren't the first
                     break
                 } catch (_: NoSuchFieldException) {
                 }
@@ -60,125 +89,120 @@ class MetricsLite(
     }
 
     /**
-     * Загружает или создаёт конфигурационный файл для bStats.
-     */
-    private fun loadOrCreateConfig(): YamlConfiguration {
-        val bStatsFolder = File(plugin.dataFolder.parentFile, "bStats")
-        if (!bStatsFolder.exists()) {
-            bStatsFolder.mkdirs()
-        }
-        val configFile = File(bStatsFolder, "config.yml")
-        val config = YamlConfiguration.loadConfiguration(configFile)
-        if (!config.isSet("serverUuid")) {
-            config.addDefault("enabled", true)
-            config.addDefault("serverUuid", UUID.randomUUID().toString())
-            config.addDefault("logFailedRequests", false)
-            config.addDefault("logSentData", false)
-            config.addDefault("logResponseStatusText", false)
-            config.options().setHeader(
-                listOf(
-                    "bStats collects some data for plugin authors like how many servers are using their plugins.",
-                    "To honor their work, you should not disable it.",
-                    "This has nearly no effect on the server performance!",
-                    "Check out https://bStats.org/ to learn more :)"
-                )
-            ).copyDefaults(true)
-            try {
-                config.save(configFile)
-            } catch (_: IOException) {
-            }
-        }
-        return config
-    }
-
-    /**
-     * Запускает периодическую отправку данных каждые 30 минут (первый запуск через 5 минут).
+     * Starts the Scheduler which submits our data every 30 minutes.
      */
     private fun startSubmitting() {
-        val timer = Timer(true)
+        val timer = Timer(true) // We use a timer cause the Bukkit scheduler is affected by server lags
         timer.scheduleAtFixedRate(object : TimerTask() {
             override fun run() {
-                if (!plugin.isEnabled) {
+                if (!plugin.isEnabled) { // Plugin was disabled
                     timer.cancel()
                     return
                 }
+
                 CoroutineScope(bukkitDispatcher).launch {
                     submitData()
                 }
+
+                // Nevertheless we want our code to run in the Bukkit main thread, so we have to use the Bukkit scheduler
+                // Don't be afraid! The connection to the bStats server is still async, only the stats collection is sync ;)
             }
-        }, 1000L * 60 * 5, 1000L * 60 * 30)
+        }, (1000 * 60 * 5).toLong(), (1000 * 60 * 30).toLong())
+        // Submit the data every 30 minutes, first time after 5 minutes to give other plugins enough time to start
+        // WARNING: Changing the frequency has no effect but your plugin WILL be blocked/deleted!
+        // WARNING: Just don't do it!
     }
 
     val pluginData: JsonObject
-        get() = JsonObject().apply {
-            addProperty("pluginName", plugin.description.name)
-            addProperty("id", pluginId)
-            addProperty("pluginVersion", plugin.description.version)
-            add("customCharts", JsonArray())
+        get() {
+            val data = JsonObject()
+
+            val pluginName = plugin.description.name
+            val pluginVersion = plugin.description.version
+
+            data.addProperty("pluginName", pluginName) // Append the name of the plugin
+            data.addProperty("id", pluginId) // Append the id of the plugin
+            data.addProperty("pluginVersion", pluginVersion) // Append the version of the plugin
+            data.add("customCharts", JsonArray())
+
+            return data
         }
 
     private val serverData: JsonObject
-        get() = JsonObject().apply {
-            addProperty("serverUUID", serverUUID)
-            addProperty("playerAmount", getOnlinePlayersCount())
-            addProperty("onlineMode", if (Bukkit.getOnlineMode()) 1 else 0)
-            addProperty("bukkitVersion", Bukkit.getVersion())
-            addProperty("bukkitName", Bukkit.getName())
-            addProperty("javaVersion", System.getProperty("java.version"))
-            addProperty("osName", System.getProperty("os.name"))
-            addProperty("osArch", System.getProperty("os.arch"))
-            addProperty("osVersion", System.getProperty("os.version"))
-            addProperty("coreCount", Runtime.getRuntime().availableProcessors())
+        get() {
+            // Minecraft specific data
+            var playerAmount: Int
+            try {
+                // Around MC 1.8 the return type was changed to a collection from an array,
+                // This fixes java.lang.NoSuchMethodError: org.bukkit.Bukkit.getOnlinePlayers()Ljava/util/Collection;
+                val onlinePlayersMethod = Class.forName("org.bukkit.Server").getMethod("getOnlinePlayers")
+                playerAmount = if (onlinePlayersMethod.returnType == MutableCollection::class.java)
+                    (onlinePlayersMethod.invoke(Bukkit.getServer()) as Collection<*>).size
+                else
+                    (onlinePlayersMethod.invoke(Bukkit.getServer()) as Array<*>).size
+            } catch (_: Exception) {
+                playerAmount = Bukkit.getOnlinePlayers().size // Just use the new method if the Reflection failed
+            }
+            val onlineMode = if (Bukkit.getOnlineMode()) 1 else 0
+            val bukkitVersion = Bukkit.getVersion()
+            val bukkitName = Bukkit.getName()
+
+            // OS/Java specific data
+            val javaVersion = System.getProperty("java.version")
+            val osName = System.getProperty("os.name")
+            val osArch = System.getProperty("os.arch")
+            val osVersion = System.getProperty("os.version")
+            val coreCount = Runtime.getRuntime().availableProcessors()
+
+            val data = JsonObject()
+
+            data.addProperty("serverUUID", serverUUID)
+
+            data.addProperty("playerAmount", playerAmount)
+            data.addProperty("onlineMode", onlineMode)
+            data.addProperty("bukkitVersion", bukkitVersion)
+            data.addProperty("bukkitName", bukkitName)
+
+            data.addProperty("javaVersion", javaVersion)
+            data.addProperty("osName", osName)
+            data.addProperty("osArch", osArch)
+            data.addProperty("osVersion", osVersion)
+            data.addProperty("coreCount", coreCount)
+
+            return data
         }
 
     /**
-     * Получает количество онлайн игроков с учётом совместимости разных версий Bukkit.
-     */
-    private fun getOnlinePlayersCount(): Int {
-        return try {
-            val onlinePlayersMethod = Class.forName("org.bukkit.Server").getMethod("getOnlinePlayers")
-            if (onlinePlayersMethod.returnType == MutableCollection::class.java)
-                (onlinePlayersMethod.invoke(Bukkit.getServer()) as Collection<*>).size
-            else
-                (onlinePlayersMethod.invoke(Bukkit.getServer()) as Array<*>).size
-        } catch (_: Exception) {
-            Bukkit.getOnlinePlayers().size
-        }
-    }
-
-    /**
-     * Собирает данные и отправляет их.
+     * Collects the data and sends it afterwards.
      */
     private suspend fun submitData() {
         val data = serverData
-        val pluginsArray = JsonArray()
 
-        // Собираем данные по плагинам, зарегистрированным через bStats
+        val pluginData = JsonArray()
+        // Search for all other bStats Metrics classes to get their plugin data
         for (service in Bukkit.getServicesManager().knownServices) {
             try {
-                service.getField("B_STATS_VERSION")
+                service.getField("B_STATS_VERSION") // Our identifier :)
+
                 for (provider in Bukkit.getServicesManager().getRegistrations(service)) {
                     try {
-                        when (val pluginData = provider.service.getMethod("getPluginData").invoke(provider.provider)) {
-                            is JsonObject -> pluginsArray.add(pluginData)
-                            else -> {
-                                try {
-                                    val jsonObjectJsonSimple = Class.forName("org.json.simple.JSONObject")
-                                    if (pluginData.javaClass.isAssignableFrom(jsonObjectJsonSimple)) {
-                                        val jsonStringGetter = jsonObjectJsonSimple.getDeclaredMethod("toJSONString")
-                                        jsonStringGetter.isAccessible = true
-                                        val jsonString = jsonStringGetter.invoke(pluginData) as String
-                                        val jsonObj = JsonParser().parse(jsonString).asJsonObject
-                                        pluginsArray.add(jsonObj)
-                                    }
-                                } catch (e: ClassNotFoundException) {
-                                    if (logFailedRequests) {
-                                        plugin.logger.log(
-                                            Level.SEVERE,
-                                            "Unexpected exception during metrics submission",
-                                            e
-                                        )
-                                    }
+                        val plugin = provider.service.getMethod("getPluginData").invoke(provider.provider)
+                        if (plugin is JsonObject) {
+                            pluginData.add(plugin)
+                        } else { // old bstats version compatibility
+                            try {
+                                val jsonObjectJsonSimple = Class.forName("org.json.simple.JSONObject")
+                                if (plugin.javaClass.isAssignableFrom(jsonObjectJsonSimple)) {
+                                    val jsonStringGetter = jsonObjectJsonSimple.getDeclaredMethod("toJSONString")
+                                    jsonStringGetter.isAccessible = true
+                                    val jsonString = jsonStringGetter.invoke(plugin) as String
+                                    val `object` = JsonParser().parse(jsonString).asJsonObject
+                                    pluginData.add(`object`)
+                                }
+                            } catch (e: ClassNotFoundException) {
+                                // minecraft version 1.14+
+                                if (logFailedRequests) {
+                                    this.plugin.logger.log(Level.SEVERE, "Encountered unexpected exception ", e)
                                 }
                             }
                         }
@@ -191,14 +215,21 @@ class MetricsLite(
             } catch (_: NoSuchFieldException) {
             }
         }
-        data.add("plugins", pluginsArray)
+
+        data.add("plugins", pluginData)
 
         withContext(ioDispatcher) {
             try {
+                // Send the data
                 sendData(plugin, data)
             } catch (e: Exception) {
+                // Something went wrong! :(
                 if (logFailedRequests) {
-                    plugin.logger.log(Level.WARNING, "Could not submit plugin stats for ${plugin.name}", e)
+                    plugin.logger.log(
+                        Level.WARNING,
+                        "Could not submit plugin stats of " + plugin.name,
+                        e
+                    )
                 }
             }
         }
@@ -206,80 +237,115 @@ class MetricsLite(
 
     companion object {
         init {
-            if (System.getProperty("bstats.relocatecheck") == null ||
-                System.getProperty("bstats.relocatecheck") != "false"
-            ) {
+            // You can use the property to disable the check in your test environment
+            if (System.getProperty("bstats.relocatecheck") == null || System.getProperty("bstats.relocatecheck") != "false") {
+                // Maven's Relocate is clever and changes strings, too. So we have to use this little "trick" ... :D
                 val defaultPackage = String(
                     byteArrayOf(
-                        'o'.code.toByte(), 'r'.code.toByte(), 'g'.code.toByte(), '.'.code.toByte(),
-                        'b'.code.toByte(), 's'.code.toByte(), 't'.code.toByte(), 'a'.code.toByte(),
-                        't'.code.toByte(), 's'.code.toByte(), '.'.code.toByte(), 'b'.code.toByte(),
-                        'u'.code.toByte(), 'k'.code.toByte(), 'k'.code.toByte(), 'i'.code.toByte()
+                        'o'.code.toByte(),
+                        'r'.code.toByte(),
+                        'g'.code.toByte(),
+                        '.'.code.toByte(),
+                        'b'.code.toByte(),
+                        's'.code.toByte(),
+                        't'.code.toByte(),
+                        'a'.code.toByte(),
+                        't'.code.toByte(),
+                        's'.code.toByte(),
+                        '.'.code.toByte(),
+                        'b'.code.toByte(),
+                        'u'.code.toByte(),
+                        'k'.code.toByte(),
+                        'k'.code.toByte(),
+                        'i'.code.toByte(),
+                        't'.code.toByte()
                     )
                 )
                 val examplePackage = String(
                     byteArrayOf(
-                        'y'.code.toByte(), 'o'.code.toByte(), 'u'.code.toByte(), 'r'.code.toByte(),
-                        '.'.code.toByte(), 'p'.code.toByte(), 'a'.code.toByte(), 'c'.code.toByte(),
-                        'k'.code.toByte(), 'a'.code.toByte(), 'g'.code.toByte(), 'e'.code.toByte()
+                        'y'.code.toByte(),
+                        'o'.code.toByte(),
+                        'u'.code.toByte(),
+                        'r'.code.toByte(),
+                        '.'.code.toByte(),
+                        'p'.code.toByte(),
+                        'a'.code.toByte(),
+                        'c'.code.toByte(),
+                        'k'.code.toByte(),
+                        'a'.code.toByte(),
+                        'g'.code.toByte(),
+                        'e'.code.toByte()
                     )
                 )
-                check(
-                    !(MetricsLite::class.java.getPackage().name == defaultPackage ||
-                            MetricsLite::class.java.getPackage().name == examplePackage)
-                ) { "bStats Metrics class has not been relocated correctly!" }
+                // We want to make sure nobody just copy & pastes the example and use the wrong package names
+                check(!(MetricsLite::class.java.getPackage().name == defaultPackage || MetricsLite::class.java.getPackage().name == examplePackage)) { "bStats Metrics class has not been relocated correctly!" }
             }
         }
 
-        private const val B_STATS_VERSION: Int = 1
+        // The version of this bStats class
+        const val B_STATS_VERSION: Int = 1
+
+        // The url to which the data is sent
         private const val URL = "https://bStats.org/submitData/bukkit"
+
+        // Should failed requests be logged?
         private var logFailedRequests: Boolean = false
+
+        // Should the sent data be logged?
         private var logSentData: Boolean = false
+
+        // Should the response text be logged?
         private var logResponseStatusText: Boolean = false
+
+        // The uuid of the server
         private var serverUUID: String? = null
 
-        /**
-         * Отправляет данные на сервер bStats с использованием Ktor HttpClient.
-         * Метод должен вызываться вне основного потока.
-         */
         @Throws(Exception::class)
-        private suspend fun sendData(plugin: Plugin, data: JsonObject) {
+        private fun sendData(plugin: Plugin, data: JsonObject) {
             if (Bukkit.isPrimaryThread()) {
                 throw IllegalAccessException("This method must not be called from the main thread!")
             }
             if (logSentData) {
                 plugin.logger.info("Sending data to bStats: $data")
             }
+            val connection = URL(URL).openConnection() as HttpsURLConnection
+
             val compressedData = compress(data.toString())
-            val client = HttpClient(OkHttp) {
-                engine {
-                    config {
-                        followRedirects(true)
-                    }
+
+            // Add headers
+            connection.requestMethod = "POST"
+            connection.addRequestProperty("Accept", "application/json")
+            connection.addRequestProperty("Connection", "close")
+            connection.addRequestProperty("Content-Encoding", "gzip") // We gzip our request
+            connection.addRequestProperty("Content-Length", compressedData!!.size.toString())
+            connection.setRequestProperty("Content-Type", "application/json") // We send our data in JSON format
+            connection.setRequestProperty("User-Agent", "MC-Server/$B_STATS_VERSION")
+
+            // Send data
+            connection.doOutput = true
+            DataOutputStream(connection.outputStream).use { outputStream ->
+                outputStream.write(compressedData)
+            }
+            val builder = StringBuilder()
+            BufferedReader(InputStreamReader(connection.inputStream)).use { bufferedReader ->
+                var line: String?
+                while ((bufferedReader.readLine().also { line = it }) != null) {
+                    builder.append(line)
                 }
             }
-            client.use {
-                val response: HttpResponse = it.post(URL) {
-                    header("Accept", "application/json")
-                    header("Connection", "close")
-                    header("Content-Encoding", "gzip")
-                    header("Content-Length", compressedData.size.toString())
-                    header("Content-Type", "application/json")
-                    header("User-Agent", "MC-Server/$B_STATS_VERSION")
-                    setBody(ByteArrayContent(compressedData, contentType = ContentType.Application.Json))
-                }
-                if (logResponseStatusText) {
-                    val responseText = response.bodyAsText()
-                    plugin.logger.info("Sent data to bStats and received response: $responseText")
-                }
+            if (logResponseStatusText) {
+                plugin.logger.info("Sent data to bStats and received response: $builder")
             }
         }
 
         @Throws(IOException::class)
-        private fun compress(str: String?): ByteArray {
+        private fun compress(str: String?): ByteArray? {
+            if (str == null) {
+                return null
+            }
             val outputStream = ByteArrayOutputStream()
             GZIPOutputStream(outputStream).use { gzip ->
-                gzip.write(str?.toByteArray(StandardCharsets.UTF_8) ?: ByteArray(0))
+                gzip.write(str.toByteArray(StandardCharsets.UTF_8))
             }
             return outputStream.toByteArray()
         }
