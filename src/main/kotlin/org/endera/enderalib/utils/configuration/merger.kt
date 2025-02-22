@@ -69,13 +69,11 @@ fun mergeYamlNodes(fileNode: YamlNode, defaultNode: YamlNode): YamlNode {
     return when {
         fileNode is YamlMap && defaultNode is YamlMap -> {
             val mergedEntries = mutableMapOf<YamlScalar, YamlNode>()
-            // Обходим ключи дефолтного мапа, используя сравнение по содержимому
             defaultNode.entries.forEach { (defaultKey, defaultValue) ->
                 val matchingFileKey = fileNode.entries.keys.find { it.content == defaultKey.content }
                 val fileValue = matchingFileKey?.let { fileNode.entries[it] }
                 mergedEntries[defaultKey] = if (fileValue != null) mergeYamlNodes(fileValue, defaultValue) else defaultValue
             }
-            // Добавляем дополнительные ключи из fileNode, которых нет в mergedEntries по содержимому ключа
             fileNode.entries.forEach { (fileKey, fileValue) ->
                 if (!mergedEntries.keys.any { it.content == fileKey.content }) {
                     mergedEntries[fileKey] = fileValue
@@ -84,9 +82,8 @@ fun mergeYamlNodes(fileNode: YamlNode, defaultNode: YamlNode): YamlNode {
             YamlMap(mergedEntries, path = YamlPath.root)
         }
         fileNode is YamlList && defaultNode is YamlList -> {
-            // Для списков используем значение из файла
             fileNode
         }
-        else -> fileNode // Для скаляров или несовпадающих типов — используем значение из файла
+        else -> fileNode
     }
 }

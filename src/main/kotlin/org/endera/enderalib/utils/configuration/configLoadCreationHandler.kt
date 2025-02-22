@@ -61,6 +61,18 @@ class ConfigurationManager<T : Any>(
 
         // Если строгий режим не сработал, выполняем динамическое слияние
         if (fileConfig == null) {
+            // Создаем резервную копию исходного файла, так как мерджер не обращает внимания на его содержимое
+            try {
+                val backupFile = File(
+                    configFile.parent,
+                    "${configFile.nameWithoutExtension}-backup.${configFile.extension}"
+                )
+                configFile.copyTo(backupFile, overwrite = true)
+                logger.info("Backup of original configuration saved to: ${backupFile.absolutePath}")
+            } catch (e: Exception) {
+                logger.warning("Failed to backup original configuration: ${e.message ?: "Unknown error"}.")
+            }
+
             try {
                 logger.info("Attempting dynamic merge of configuration.")
                 val fileContent = configFile.readText(Charsets.UTF_8)
@@ -74,7 +86,7 @@ class ConfigurationManager<T : Any>(
 
         // Если восстановить конфигурацию не удалось, переименовываем файл и создаём новый
         if (fileConfig == null) {
-            logger.warning("Renaming invalid configuration file and creating a new one.")
+            logger.warning("Invalid configuration detected. Renaming invalid configuration file and creating a new one.")
             try {
                 renameInvalidConfig(configFile)
                 return createNewConfig().also {

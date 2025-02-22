@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "org.endera"
-version = "1.4.1"
+version = "1.4.2"
 
 repositories {
     mavenCentral()
@@ -20,7 +20,7 @@ repositories {
     }
 }
 
-val deps = dependencies {
+dependencies {
     // Minecraft APIs
     val exposedVersion = "0.59.0"
     val ktorVersion = "3.1.0"
