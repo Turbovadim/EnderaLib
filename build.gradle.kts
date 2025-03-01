@@ -66,18 +66,14 @@ publishing {
 
 
 tasks.processResources {
-    dependsOn(generatePluginYml)
+    inputs.property("version", rootProject.version)
+        filesMatching("**plugin.yml") {
+            expand("version" to rootProject.version)
+    }
 }
 
 tasks.shadowJar {
     archiveClassifier.set("shaded")
-}
-
-val generatePluginYml = tasks.create("generatePluginYml", Copy::class.java) {
-    from("/src/main/templates/plugin.yml")
-    into("/src/main/resources")
-    expand(mapOf("projectVersion" to project.version))
-    outputs.upToDateWhen { false }
 }
 
 tasks.test {
