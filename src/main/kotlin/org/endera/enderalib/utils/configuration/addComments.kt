@@ -10,27 +10,36 @@ fun String.toKebabCase(): String =
 fun addCommentsForClass(clazz: KClass<*>, yamlText: String, baseIndent: String = ""): String {
     var result = yamlText
     clazz.memberProperties.forEach { property ->
+        // Получаем аннотации для комментария и spacer.
         val comment = property.findAnnotation<Comment>()
+        val spacer = property.findAnnotation<Spacer>()
         val key = property.name.toKebabCase()
+
         // Регулярное выражение для поиска строки с ключом и последующего блока с отступом больше baseIndent.
-        // Оно ищет строку, начинающуюся с baseIndent, затем key и двоеточие, а потом все строки, которые имеют больший отступ.
         val regex = Regex("(?m)^($baseIndent)($key:.*(?:\n(?!$baseIndent\\S).*)*)")
         result = regex.replace(result) { matchResult ->
             val indent = matchResult.groupValues[1]
             var block = matchResult.groupValues[2]
-            // Если тип свойства – вложенная data class, обрабатываем её рекурсивно, увеличивая отступ (предполагается indent = 2 пробела)
+
+            // Если тип свойства – вложенная data class, обрабатываем её рекурсивно, увеличивая отступ (например, на 2 пробела)
             val nestedType = property.returnType.classifier as? KClass<*>
             if (nestedType != null && nestedType.annotations.any { it.annotationClass.simpleName == "Serializable" }) {
                 block = addCommentsForClass(nestedType, block, "$baseIndent  ")
             }
-            // Если аннотация присутствует, вставляем строку комментария над блоком
+
+            // Формирование комментариев, если присутствует аннотация @Comment.
             val commentStr = if (comment != null) {
                 comment.text
                     .trimIndent()
                     .lines()
                     .joinToString("\n") { "$indent# $it" } + "\n"
             } else ""
-            "$commentStr$indent$block"
+
+            // Формирование N пустых строк, если есть аннотация @Spacer.
+            val spacerStr = spacer?.let { "\n".repeat(it.count) } ?: ""
+
+            // Собираем итоговый блок: сначала пустые строки, затем комментарий, потом само свойство.
+            "$spacerStr$commentStr$indent$block"
         }
     }
     return result
