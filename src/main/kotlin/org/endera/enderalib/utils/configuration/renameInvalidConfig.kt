@@ -13,10 +13,20 @@ import java.util.*
  */
 fun renameInvalidConfig(file: File) {
     val dateFormat = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss")
-    val backupFileName = "config_invalid_${dateFormat.format(Date())}.yml"
-    val success = file.renameTo(File(file.parent, backupFileName))
+    val originalName = file.name
+    val dotIndex = originalName.lastIndexOf('.')
+    val newName = if (dotIndex != -1) {
+        // Если есть расширение, то вставляем суффикс перед ним
+        val baseName = originalName.substring(0, dotIndex)
+        val extension = originalName.substring(dotIndex) // включает точку
+        "${baseName}_invalid_${dateFormat.format(Date())}$extension"
+    } else {
+        // Если расширения нет, просто добавляем суффикс к имени
+        "${originalName}_invalid_${dateFormat.format(Date())}"
+    }
 
+    val success = file.renameTo(File(file.parent, newName))
     if (!success) {
-        println("Failed to rename the configuration file.")
+        println("Не удалось переименовать файл конфигурации.")
     }
 }

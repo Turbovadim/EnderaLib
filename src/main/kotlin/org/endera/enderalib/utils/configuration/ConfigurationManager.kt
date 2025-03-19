@@ -3,21 +3,22 @@ package org.endera.enderalib.utils.configuration
 import com.charleskorn.kaml.YamlConfiguration
 import com.charleskorn.kaml.YamlNamingStrategy
 import kotlinx.serialization.KSerializer
+import org.endera.enderalib.utils.PluginException
 import java.io.File
 import java.util.logging.Logger
 import kotlin.reflect.KClass
 
 /**
- * Класс-менеджер конфигурации, отвечающий за загрузку или создание файла конфигурации,
- * его динамическое слияние с дефолтной конфигурацией и запись с комментариями.
+ * Configuration manager class responsible for loading or creating a configuration file,
+ * dynamically merging it with the default configuration, and saving it with comments.
  *
- * @param T Тип объекта конфигурации.
- * @param configFile Файл конфигурации.
- * @param dataFolder Папка с данными плагина.
- * @param defaultConfig Дефолтный объект конфигурации.
- * @param serializer Сериализатор для типа конфигурации.
- * @param logger Логгер для сообщений об ошибках и предупреждениях.
- * @param clazz Класс типа конфигурации (для замены reified).
+ * @param T The type of the configuration object.
+ * @param configFile The configuration file.
+ * @param dataFolder The plugin's data folder.
+ * @param defaultConfig The default configuration object.
+ * @param serializer The serializer for the configuration type.
+ * @param logger The logger for error and warning messages.
+ * @param clazz The configuration type class (for replacing reified).
  */
 class ConfigurationManager<T : Any>(
     private val configFile: File,
@@ -28,15 +29,19 @@ class ConfigurationManager<T : Any>(
     private val clazz: KClass<T>
 ) {
 
+    val type: KClass<T>
+        get() = clazz
+
     /**
-     * Загружает или создаёт конфигурацию, объединяет её с дефолтной и записывает изменения в файл.
+     * Loads or creates the configuration, merges it with the default one,
+     * and writes the changes to the file.
      *
-     * @return Загруженная или вновь созданная конфигурация.
-     * @throws PluginException если не удалось загрузить или создать конфигурацию.
+     * @return The loaded or newly created configuration.
+     * @throws PluginException if the configuration could not be loaded or created.
      */
     fun loadOrCreateConfig(): T {
         if (!configFile.exists()) {
-            logger.info("Configuration file not found, creating new one.")
+            logger.info("Configuration '${configFile.name}' file not found, creating new one.")
             return createNewConfig()
         }
 
@@ -53,34 +58,32 @@ class ConfigurationManager<T : Any>(
                     yamlNamingStrategy = YamlNamingStrategy.KebabCase
                 )
             ).also {
-                logger.info("Configuration successfully loaded in strict mode!")
+                logger.info("Configuration '${configFile.name}' successfully loaded in strict mode!")
             }
         } catch (e: Exception) {
-            logger.warning("Parsing in strict mode failed: ${e.message ?: "Unknown error"}.")
+            logger.warning("Parsing of '${configFile.name}' in strict mode failed: ${e.message ?: "Unknown error"}.")
         }
 
-        // Если строгий режим не сработал, выполняем динамическое слияние
         if (fileConfig == null) {
-            // Создаем резервную копию исходного файла, так как мерджер не обращает внимания на его содержимое
             try {
                 val backupFile = File(
                     configFile.parent,
                     "${configFile.nameWithoutExtension}-backup.${configFile.extension}"
                 )
                 configFile.copyTo(backupFile, overwrite = true)
-                logger.info("Backup of original configuration saved to: ${backupFile.absolutePath}")
+                logger.info("Backup of original configuration ''${configFile.name} saved to: ${backupFile.absolutePath}")
             } catch (e: Exception) {
-                logger.warning("Failed to backup original configuration: ${e.message ?: "Unknown error"}.")
+                logger.warning("Failed to backup original configuration '${configFile.name}': ${e.message ?: "Unknown error"}.")
             }
 
             try {
-                logger.info("Attempting dynamic merge of configuration.")
+                logger.info("Attempting dynamic merge of configuration '${configFile.name}'.")
                 val fileContent = configFile.readText(Charsets.UTF_8)
                 fileConfig = mergeYamlConfigs(fileContent, defaultConfig, serializer).also {
-                    logger.info("Dynamic merge successful!")
+                    logger.info("Dynamic of '${configFile.name}' merge is successful!")
                 }
             } catch (e: Exception) {
-                logger.severe("Dynamic merge failed: ${e.message ?: "Unknown error"}.")
+                logger.severe("Dynamic merge of '${configFile.name}'failed: ${e.message ?: "Unknown error"}.")
             }
         }
 
@@ -97,23 +100,16 @@ class ConfigurationManager<T : Any>(
                 throw PluginException("Failed to regenerate configuration", e)
             }
         }
-
-        // Для гарантии заполнения всех полей объединяем загруженную конфигурацию с дефолтной
-        val mergedConfig: T = mergeYamlConfigs(
-            configToYaml(fileConfig, serializer),
-            defaultConfig,
-            serializer
-        )
         // Записываем объединённый конфиг обратно в файл, добавляя комментарии
-        writeConfigWithComments(configFile, mergedConfig, serializer, clazz)
-        return mergedConfig
+        writeConfigWithComments(configFile, fileConfig, serializer, clazz)
+        return fileConfig
     }
 
     /**
-     * Создаёт новый файл конфигурации, используя дефолтную конфигурацию.
+     * Creates a new configuration file using the default configuration.
      *
-     * @return Новый объект конфигурации.
-     * @throws PluginException если не удалось создать или загрузить конфигурацию.
+     * @return A new configuration object.
+     * @throws PluginException if the configuration could not be created or loaded.
      */
     private fun createNewConfig(): T {
         if (!dataFolder.exists() && !dataFolder.mkdirs()) {
@@ -127,16 +123,11 @@ class ConfigurationManager<T : Any>(
         }
         return try {
             loadConfig(configFile, serializer).also {
-                logger.info("Configuration successfully created and loaded!")
+                logger.info("Configuration '${configFile.name}' successfully created and loaded!")
             }
         } catch (e: Exception) {
-            logger.severe("Error while loading the created configuration: ${e.message ?: "Unknown error"}")
+            logger.severe("Error while loading the created configuration '${configFile.name}': ${e.message ?: "Unknown error"}")
             throw PluginException("Failed to load configuration after creation", e)
         }
     }
 }
-
-/**
- * Исключение, выбрасываемое при критических ошибках загрузки или создания конфигурации.
- */
-class PluginException(message: String, cause: Throwable? = null) : Exception(message, cause)

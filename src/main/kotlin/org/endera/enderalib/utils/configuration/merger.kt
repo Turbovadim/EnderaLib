@@ -1,36 +1,15 @@
 package org.endera.enderalib.utils.configuration
 
-import com.charleskorn.kaml.Yaml
-import com.charleskorn.kaml.YamlConfiguration
-import com.charleskorn.kaml.YamlList
-import com.charleskorn.kaml.YamlMap
-import com.charleskorn.kaml.YamlNamingStrategy
-import com.charleskorn.kaml.YamlNode
-import com.charleskorn.kaml.YamlPath
-import com.charleskorn.kaml.YamlScalar
+import com.charleskorn.kaml.*
 import kotlinx.serialization.KSerializer
 
 /**
- * Универсальная функция для преобразования объекта конфигурации в YAML-строку.
- */
-fun <T> configToYaml(config: T, serializer: KSerializer<T>): String {
-    val yaml = Yaml(
-        configuration = YamlConfiguration(
-            strictMode = false,
-            breakScalarsAt = 400,
-            yamlNamingStrategy = YamlNamingStrategy.KebabCase
-        )
-    )
-    return yaml.encodeToString(serializer, config)
-}
-
-/**
- * Объединяет YAML-представление содержимого файла и дефолтного объекта.
+ * Merges the YAML representation of the file content and the default object.
  *
- * @param fileContent Сырые данные файла конфигурации.
- * @param defaultConfig Дефолтный объект конфигурации.
- * @param serializer Сериализатор для типа конфигурации.
- * @return Объект конфигурации типа [T] после объединения.
+ * @param fileContent Raw data from the configuration file.
+ * @param defaultConfig The default configuration object.
+ * @param serializer The serializer for the configuration type.
+ * @return A configuration object of type [T] after merging.
  */
 fun <T> mergeYamlConfigs(
     fileContent: String,
@@ -57,13 +36,13 @@ fun <T> mergeYamlConfigs(
 }
 
 /**
- * Рекурсивно объединяет два YAML-дерева (YamlNode).
+ * Recursively merges two YAML trees (YamlNode).
  *
- * Если оба узла являются мапами, для каждого ключа:
- *   - Если значение присутствует в fileNode, объединяет его с дефолтным значением.
- *   - Иначе используется дефолтное значение.
- * Для списков используется значение из fileNode.
- * Для остальных случаев возвращается fileNode.
+ * If both nodes are maps, for each key:
+ *   - If the value is present in fileNode, it merges it with the default value.
+ *   - Otherwise, the default value is used.
+ * For lists, the value from fileNode is used.
+ * In other cases, fileNode is returned.
  */
 fun mergeYamlNodes(fileNode: YamlNode, defaultNode: YamlNode): YamlNode {
     return when {

@@ -4,11 +4,12 @@ import org.bukkit.command.Command
 import org.bukkit.command.CommandExecutor
 import org.bukkit.command.CommandSender
 import org.bukkit.plugin.java.JavaPlugin
+import org.endera.enderalib.adventure.stringToComponent
 import org.endera.enderalib.bstats.MetricsLite
 import org.endera.enderalib.config.ConfigScheme
 import org.endera.enderalib.config.defaultConfig
+import org.endera.enderalib.utils.PluginException
 import org.endera.enderalib.utils.configuration.ConfigurationManager
-import org.endera.enderalib.utils.configuration.PluginException
 import org.endera.enderalib.utils.isFolia
 import java.io.File
 
@@ -21,7 +22,7 @@ internal class EnderaLib : JavaPlugin() {
     override fun onEnable() {
 
         isFolia = isFolia()
-        val metrics = MetricsLite(this, 23669)
+        MetricsLite(this, 23669)
         configFile = File("${dataFolder}/config.yml")
 
         getCommand("enderalib")?.setExecutor(EnderaLibCommand(this))
@@ -49,10 +50,10 @@ internal class EnderaLib : JavaPlugin() {
         override fun onCommand(sender: CommandSender, cmd: Command, label: String, args: Array<String>): Boolean {
             if (cmd.name.equals("enderalib", ignoreCase = true)) {
                 if (args.isNotEmpty() && args[0].equals("version", ignoreCase = true)) {
-                    sender.sendMessage("§aEnderaLib §eversion: §7${plugin.description.version}")
+                    sender.sendMessage("<green>EnderaLib <yellow>version: <gray>${plugin.description.version}".stringToComponent())
                     return true
                 } else {
-                    sender.sendMessage("§cThis command doesn't exist")
+                    sender.sendMessage("<red>This command doesn't exist".stringToComponent())
                 }
             }
             return false

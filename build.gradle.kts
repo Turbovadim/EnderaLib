@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "org.endera"
-version = "1.4.3"
+version = "1.4.4"
 
 repositories {
     mavenCentral()
@@ -23,7 +23,7 @@ repositories {
 dependencies {
     // Minecraft APIs
     val exposedVersion = "0.59.0"
-    val ktorVersion = "3.1.0"
+    val ktorVersion = "3.1.1"
 
     compileOnly("net.kyori:adventure-text-minimessage:4.16.0")
 
@@ -44,6 +44,7 @@ dependencies {
 
     api("org.jetbrains.kotlinx:kotlinx-serialization-core:1.8.0")
     api("com.charleskorn.kaml:kaml:0.72.0")
+
 
     // Database drivers
     runtimeOnly("com.mysql:mysql-connector-j:9.2.0")
@@ -85,11 +86,6 @@ kotlin {
         apiVersion.set(KotlinVersion.KOTLIN_2_1)
         jvmTarget.set(JvmTarget.JVM_17)
     }
-}
-
-
-dependencies {
-    implementation("io.ktor:ktor-client-okhttp-jvm:2.3.12")
 }
 
 tasks.withType<JavaCompile> {

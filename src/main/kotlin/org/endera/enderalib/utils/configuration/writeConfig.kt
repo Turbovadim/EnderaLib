@@ -8,15 +8,15 @@ import java.io.File
 import kotlin.reflect.KClass
 
 /**
- * Записывает объект конфигурации в файл в формате YAML, добавляя комментарии.
+ * Writes the configuration object to a file in YAML format, adding comments.
  *
- * @param T Тип объекта конфигурации.
- * @param file Файл, в который будет записана конфигурация.
- * @param config Объект конфигурации для записи.
- * @param serializer Сериализатор для типа конфигурации.
- * @param clazz Класс типа конфигурации (для замены reified).
- * @param yamlConfiguration Параметры конфигурации YAML (по умолчанию нестрогий режим).
- * @throws Exception при ошибках записи или сериализации.
+ * @param T The type of the configuration object.
+ * @param file The file where the configuration will be written.
+ * @param config The configuration object to write.
+ * @param serializer The serializer for the configuration type.
+ * @param clazz The configuration type class (for replacing reified).
+ * @param yamlConfiguration YAML configuration settings (non-strict mode by default).
+ * @throws Exception in case of writing or serialization errors.
  */
 fun <T : Any> writeConfigWithComments(
     file: File,

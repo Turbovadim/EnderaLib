@@ -1,8 +1,8 @@
 package org.endera.enderalib.utils.configuration
 
 import kotlin.reflect.KClass
-import kotlin.reflect.full.memberProperties
 import kotlin.reflect.full.findAnnotation
+import kotlin.reflect.full.memberProperties
 
 fun String.toKebabCase(): String =
     this.replace(Regex("([a-z])([A-Z])"), "$1-$2").lowercase()
@@ -37,12 +37,12 @@ fun addCommentsForClass(clazz: KClass<*>, yamlText: String, baseIndent: String =
 }
 
 /**
- * Добавляет комментарии в YAML-текст, используя информацию из аннотаций класса.
+ * Adds comments to the YAML text using information from class annotations.
  *
- * @param T Тип объекта конфигурации.
- * @param yamlText Исходный YAML-текст.
- * @param clazz Класс типа конфигурации.
- * @return YAML-текст с добавленными комментариями.
+ * @param T The type of the configuration object.
+ * @param yamlText The original YAML text.
+ * @param clazz The configuration type class.
+ * @return YAML text with added comments.
  */
 fun <T : Any> addComments(yamlText: String, clazz: KClass<T>): String {
     return addCommentsForClass(clazz, yamlText, "")
