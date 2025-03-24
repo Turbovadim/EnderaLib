@@ -6,7 +6,7 @@ import kotlin.reflect.KClass
 abstract class BaseConfigRegistry {
     private val configs = mutableMapOf<KClass<*>, Any>()
 
-    fun <T : Any> register(configClass: KClass<T>, config: T) {
+    fun register(configClass: KClass<*>, config: Any) {
         configs[configClass] = config
     }
 
